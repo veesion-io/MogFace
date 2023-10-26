@@ -35,7 +35,7 @@ parser.add_argument('--num_iter', '-n', default=140,
 parser.add_argument('--nms_th', default=0.3, type=float, help='nms threshold.')
 parser.add_argument('--pre_nms_top_k', default=5000,
                     type=int, help='number of max score image.')
-parser.add_argument('--score_th', default=0.01,
+parser.add_argument('--score_th', default=0.08,
                     type=float, help='score threshold.')
 parser.add_argument('--max_bbox_per_img', default=750,
                     type=int, help='max number of det bbox.')

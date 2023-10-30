@@ -32,7 +32,7 @@ import tensorrt as trt
 import numpy as np
 import pycuda.driver as cuda
 import pycuda.autoinit
-
+trt.init_libnvinfer_plugins(None, "")
 # Load TRT model
 TRT_LOGGER = trt.Logger()
 

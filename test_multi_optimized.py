@@ -327,7 +327,7 @@ if __name__ == '__main__':
                     shrink = max_im_shrink if max_im_shrink < 1 else 1
                     det0 = detect_face(
                         img, shrink, anchors_function=anchors_function, 
-                        model=mode, model_input_buffer=model_input_buffer,
+                        model_input_buffer=model_input_buffer,
                         model_output_buffers=model_output_buffers, 
                         context=context)  # origin test
                     det1 = flip_test(img, shrink, model_input_buffer=model_input_buffer,

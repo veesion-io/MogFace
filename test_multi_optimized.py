@@ -175,7 +175,7 @@ def detect_face(
     if shrink != 1:
         x = cv2.resize(image, None, None, fx=shrink, fy=shrink,
                        interpolation=cv2.INTER_LINEAR)
-    x = cv2.resize(image, (720, 1280)
+    x = cv2.resize(image, (720, 1280),
                     interpolation=cv2.INTER_LINEAR)
 
     # print('shrink:{}'.format(shrink))

@@ -1103,7 +1103,7 @@ typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
 /* "bbox.pyx":13
  * 
- * DTYPE = np.float
+ * DTYPE = np.float32
  * ctypedef np.float_t DTYPE_t             # <<<<<<<<<<<<<<
  * 
  * def bbox_overlaps(
@@ -3687,7 +3687,7 @@ if (!__Pyx_RefNanny) {
   /* "bbox.pyx":12
  * cimport numpy as np
  * 
- * DTYPE = np.float             # <<<<<<<<<<<<<<
+ * DTYPE = np.float32             # <<<<<<<<<<<<<<
  * ctypedef np.float_t DTYPE_t
  * 
  */

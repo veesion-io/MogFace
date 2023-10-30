@@ -128,10 +128,6 @@ parser.add_argument('--flip_ratio', default=None, type=float)
 parser.add_argument('--test_hard', default=0, type=int)
 parser.add_argument('--videos_path', default="/workspace/videos/", type=str)
 
-from algorithmes.product.inference.tensorrt_utils.tensorrt_functions import (
-    allocate_buffers,
-)
-
 
 
 def allocate_buffers(engine):

@@ -18,6 +18,10 @@ mkdir annotations
 cd utils/nms && python setup.py build_ext --inplace && cd ../..
 cd utils/bbox && python setup.py build_ext --inplace && cd ../..
 
+pip uninstall -y opencv-contrib-python \
+  && rm -rf /usr/local/lib/python3.10/dist-packages/cv2
+pip install opencv-python
+
 apt update && DEBIAN_FRONTEND=noninteractive apt install ffmpeg -y
 pip install ffprobe3
 ```

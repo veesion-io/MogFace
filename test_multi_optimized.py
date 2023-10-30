@@ -248,7 +248,7 @@ def flip_test(image, shrink, inputs, outputs, bindings, stream,
                         context):
     image_f = cv2.flip(image, 1)
     det_f = detect_face(image_f, shrink,
-        inputs, outputs, bindings, stream, anchors_function=anchors_function)
+        inputs, outputs, bindings, stream, context, anchors_function=anchors_function)
 
     det_t = np.zeros(det_f.shape)
     det_t[:, 0] = image.shape[1] - det_f[:, 2] - 1

@@ -294,7 +294,7 @@ if __name__ == '__main__':
         engine = runtime.deserialize_cuda_engine(f.read())
 
     model_input_buffer = cuda.mem_alloc(1280*720*3*4)
-    model_output_buffers = [cuda.mem_alloc(76820*4), cuda.mem_alloc(76820*4)]
+    model_output_buffers = [cuda.mem_alloc(76820*4), cuda.mem_alloc(76820*4*4)]
 
     bindings = [int(model_input_buffer), int(model_output_buffers[0]), int(model_output_buffers[1])]
 

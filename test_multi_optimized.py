@@ -35,6 +35,72 @@ import pycuda.autoinit
 trt.init_libnvinfer_plugins(None, "")
 # Load TRT model
 TRT_LOGGER = trt.Logger()
+#
+# Copyright 1993-2019 NVIDIA Corporation.  All rights reserved.
+#
+# NOTICE TO LICENSEE:
+#
+# This source code and/or documentation ("Licensed Deliverables") are
+# subject to NVIDIA intellectual property rights under U.S. and
+# international Copyright laws.
+#
+# These Licensed Deliverables contained herein is PROPRIETARY and
+# CONFIDENTIAL to NVIDIA and is being provided under the terms and
+# conditions of a form of NVIDIA software license agreement by and
+# between NVIDIA and Licensee ("License Agreement") or electronically
+# accepted by Licensee.  Notwithstanding any terms or conditions to
+# the contrary in the License Agreement, reproduction or disclosure
+# of the Licensed Deliverables to any third party without the express
+# written consent of NVIDIA is prohibited.
+#
+# NOTWITHSTANDING ANY TERMS OR CONDITIONS TO THE CONTRARY IN THE
+# LICENSE AGREEMENT, NVIDIA MAKES NO REPRESENTATION ABOUT THE
+# SUITABILITY OF THESE LICENSED DELIVERABLES FOR ANY PURPOSE.  IT IS
+# PROVIDED "AS IS" WITHOUT EXPRESS OR IMPLIED WARRANTY OF ANY KIND.
+# NVIDIA DISCLAIMS ALL WARRANTIES WITH REGARD TO THESE LICENSED
+# DELIVERABLES, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY,
+# NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE.
+# NOTWITHSTANDING ANY TERMS OR CONDITIONS TO THE CONTRARY IN THE
+# LICENSE AGREEMENT, IN NO EVENT SHALL NVIDIA BE LIABLE FOR ANY
+# SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
+# DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
+# ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THESE LICENSED DELIVERABLES.
+#
+# U.S. Government End Users.  These Licensed Deliverables are a
+# "commercial item" as that term is defined at 48 C.F.R. 2.101 (OCT
+# 1995), consisting of "commercial computer software" and "commercial
+# computer software documentation" as such terms are used in 48
+# C.F.R. 12.212 (SEPT 1995) and is provided to the U.S. Government
+# only as a commercial end item.  Consistent with 48 C.F.R.12.212 and
+# 48 C.F.R. 227.7202-1 through 227.7202-4 (JUNE 1995), all
+# U.S. Government End Users acquire the Licensed Deliverables with
+# only those rights set forth herein.
+#
+# Any use of the Licensed Deliverables in individual and commercial
+# software must include, in the user documentation and internal
+# comments to the code, the above Disclaimer and U.S. Government End
+# Users Notice.
+#
+import argparse
+import os
+
+import tensorrt as trt
+import pycuda.driver as cuda
+TRT_LOGGER = trt.Logger()
+
+# Simple helper data class that's a little nicer to use than a 2-tuple.
+class HostDeviceMem(object):
+    def __init__(self, host_mem, device_mem):
+        self.host = host_mem
+        self.device = device_mem
+
+    def __str__(self):
+        return "Host:\n" + str(self.host) + "\nDevice:\n" + str(self.device)
+
+    def __repr__(self):
+        return self.__str__()
 
 parser = argparse.ArgumentParser(description='Test Details')
 parser.add_argument('--num_iter', '-n', default=140,
@@ -62,21 +128,52 @@ parser.add_argument('--flip_ratio', default=None, type=float)
 parser.add_argument('--test_hard', default=0, type=int)
 parser.add_argument('--videos_path', default="/workspace/videos/", type=str)
 
-def forward_pass(x, model_input_buffer, model_output_buffers, context):
-    x = x.transpose(2, 0, 1)[np.newaxis, :, :, :]
-    h_input = np.ascontiguousarray(x, dtype=np.float32)
-    h_output1 = np.empty([76820*4], dtype=np.float32)  # Define appropriate output shape
-    h_output2 = np.empty([76820*4*4], dtype=np.float32)  # Define appropriate output shape
+from algorithmes.product.inference.tensorrt_utils.tensorrt_functions import (
+    allocate_buffers,
+)
 
-    cuda.memcpy_htod(model_input_buffer, h_input)
-    context.execute(bindings=bindings)
-    cuda.memcpy_dtoh(h_output1, model_output_buffers[0])
-    cuda.memcpy_dtoh(h_output2, model_output_buffers[1])
-    return h_output1, h_output2
+
+
+def allocate_buffers(engine):
+    inputs = []
+    outputs = []
+    bindings = []
+    stream = cuda.Stream()
+    for binding in engine:
+        size = trt.volume(engine.get_binding_shape(binding)) * engine.max_batch_size
+        dtype = trt.nptype(engine.get_binding_dtype(binding))
+        # Allocate host and device buffers
+        host_mem = cuda.pagelocked_empty(size, dtype)
+        device_mem = cuda.mem_alloc(host_mem.nbytes)
+        # Append the device buffer to device bindings.
+        bindings.append(int(device_mem))
+        # Append to the appropriate list.
+        if engine.binding_is_input(binding):
+            inputs.append(HostDeviceMem(host_mem, device_mem))
+        else:
+            outputs.append(HostDeviceMem(host_mem, device_mem))
+    return inputs, outputs, bindings, stream
+
+
+def forward_pass(x, inputs, outputs, bindings, stream, context):
+    x = x.transpose(2, 0, 1)[np.newaxis, :, :, :]
+    inputs[0].host = np.ascontiguousarray(x, dtype=np.float32)
+    [
+        cuda.memcpy_htod_async(inp.device, inp.host, stream)
+        for inp in inputs
+    ]
+
+    context.execute_async_v2(bindings=bindings, stream_handle=stream.handle)
+    # Transfer predictions back from the GPU.
+    [cuda.memcpy_dtoh_async(out.host, out.device, stream) for out in outputs]
+    # Synchronize the stream
+    stream.synchronize()
+    # Return only the host outputs.
+    return [out.host for out in outputs]
 
 def detect_face(
-        image, shrink, anchors_function, model_input_buffer, 
-        model_output_buffers, context):
+        image, shrink, inputs, outputs, bindings, stream,
+                        context, anchors_function):
     # starttime = datetime.datetime.now()
     x = image
     if shrink != 1:
@@ -89,7 +186,7 @@ def detect_face(
     height = x.shape[0]
     # print('width: {}, height: {}'.format(width, height))
 
-    out = forward_pass(x, model_input_buffer, model_output_buffers, context)
+    out = forward_pass(x, inputs, outputs, bindings, stream, context)
 
     anchors = anchor_utils.transform_anchor((anchors_function(height, width)))
     anchors = torch.FloatTensor(anchors).cuda()
@@ -293,10 +390,8 @@ if __name__ == '__main__':
     with open("model.trt", "rb") as f, trt.Runtime(TRT_LOGGER) as runtime:
         engine = runtime.deserialize_cuda_engine(f.read())
 
-    model_input_buffer = cuda.mem_alloc(1280*720*3*4)
-    model_output_buffers = [cuda.mem_alloc(76820*4), cuda.mem_alloc(76820*4*4)]
+    inputs, outputs, bindings, stream = allocate_buffers(engine)
 
-    bindings = [int(model_input_buffer), int(model_output_buffers[0]), int(model_output_buffers[1])]
 
 
     anchors_function = GeneartePriorBoxes(
@@ -326,13 +421,11 @@ if __name__ == '__main__':
                     max_im_shrink = args.max_img_shrink if max_im_shrink > args.max_img_shrink else max_im_shrink
                     shrink = max_im_shrink if max_im_shrink < 1 else 1
                     det0 = detect_face(
-                        img, shrink, anchors_function=anchors_function, 
-                        model_input_buffer=model_input_buffer,
-                        model_output_buffers=model_output_buffers, 
-                        context=context)  # origin test
-                    det1 = flip_test(img, shrink, model_input_buffer=model_input_buffer,
-                        model_output_buffers=model_output_buffers, 
-                        context=context)    # flip test
+                        img, shrink, 
+                        inputs, outputs, bindings, stream,
+                        context, anchors_function=anchors_function)  # origin test
+                    det1 = flip_test(img, shrink, inputs, outputs, bindings, stream,
+                        context)    # flip test
 
                 # if args.flip_ratio is not None:
                 #     det = np.row_stack((det0, det1, det2, det3, det4, det5))

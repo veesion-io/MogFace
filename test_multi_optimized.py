@@ -1,10 +1,3 @@
-import tensorrt as trt
-import numpy as np
-import pycuda.driver as cuda
-import pycuda.autoinit
-
-# Load TRT model
-TRT_LOGGER = trt.Logger()
 # ******************************************************
 # Author       : liuyang
 # Last modified:	2020-01-15 15:54
@@ -35,6 +28,13 @@ from data.preprocess import BasePreprocess
 from data.data_aug_settings import DataAugSettings
 from tqdm import tqdm
 from data.anchors_opr import GeneartePriorBoxes
+import tensorrt as trt
+import numpy as np
+import pycuda.driver as cuda
+import pycuda.autoinit
+
+# Load TRT model
+TRT_LOGGER = trt.Logger()
 
 parser = argparse.ArgumentParser(description='Test Details')
 parser.add_argument('--num_iter', '-n', default=140,

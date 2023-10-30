@@ -175,7 +175,7 @@ def detect_face(
     if shrink != 1:
         x = cv2.resize(image, None, None, fx=shrink, fy=shrink,
                        interpolation=cv2.INTER_LINEAR)
-    x = cv2.resize(image, (720, 1280),
+    x = cv2.resize(image, (1280, 720),
                     interpolation=cv2.INTER_LINEAR)
 
     # print('shrink:{}'.format(shrink))
@@ -188,7 +188,7 @@ def detect_face(
 
     anchors = anchor_utils.transform_anchor((anchors_function(height, width)))
     anchors = torch.FloatTensor(anchors).cuda()
-    decode_bbox = anchor_utils.decode(torch.from_numpy(out[1].reshape(-1, 4)).cuda(), anchors), 
+    decode_bbox = anchor_utils.decode(torch.from_numpy(out[1].reshape(-1, 4)).cuda(), anchors)
     boxes = decode_bbox
     scores = torch.from_numpy(out[0].reshape(-1, 1)).cuda()
 
@@ -244,12 +244,11 @@ def detect_face(
 
 
 
-def flip_test(image, shrink, model_input_buffer, 
-        model_output_buffers, context):
+def flip_test(image, shrink, inputs, outputs, bindings, stream,
+                        context):
     image_f = cv2.flip(image, 1)
-    det_f = detect_face(image_f, shrink, anchors_function=anchors_function,
-        model_input_buffer=model_input_buffer, 
-        model_output_buffers=model_output_buffers, context=context)
+    det_f = detect_face(image_f, shrink,
+        inputs, outputs, bindings, stream, anchors_function=anchors_function)
 
     det_t = np.zeros(det_f.shape)
     det_t[:, 0] = image.shape[1] - det_f[:, 2] - 1

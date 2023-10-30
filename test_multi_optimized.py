@@ -188,9 +188,9 @@ def detect_face(
 
     anchors = anchor_utils.transform_anchor((anchors_function(height, width)))
     anchors = torch.FloatTensor(anchors).cuda()
-    decode_bbox = anchor_utils.decode(torch.from_numpy(out[1].reshape(-1, 4)), anchors), 
+    decode_bbox = anchor_utils.decode(torch.from_numpy(out[1].reshape(-1, 4)).cuda(), anchors), 
     boxes = decode_bbox
-    scores = torch.from_numpy(out[0].reshape(-1, 1))
+    scores = torch.from_numpy(out[0].reshape(-1, 1)).cuda()
 
     top_k = args.pre_nms_top_k
     v, idx = scores[:, 0].sort(0)

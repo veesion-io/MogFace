@@ -96,7 +96,7 @@ if __name__ == '__main__':
     print ('Finish load model.')
 
     # generate predict bbox
-    img = np.zeros((1280, 720, 3)).float(np.uint8)
+    img = np.zeros((1280, 720, 3)).astype(np.float)
     with torch.no_grad():
         max_im_shrink = (0x7fffffff / 200.0 / (img.shape[0] * img.shape[1])) ** 0.5 # the max size of input image for caffe
         max_im_shrink = 2.2 if max_im_shrink > 2.2 else max_im_shrink

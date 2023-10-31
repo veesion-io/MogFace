@@ -153,10 +153,8 @@ def allocate_buffers(engine):
 
 def forward_pass(x, inputs, outputs, bindings, stream, context):
     x = x.transpose(2, 0, 1)[np.newaxis, :, :, :]
-    [
-        cuda.memcpy_dtod_async(inp.device, np.ascontiguousarray(x, dtype=np.float32), stream)
-        for inp in inputs
-    ]
+    inputs[0].host = np.ascontiguousarray(x, dtype=np.float32)
+    cuda.memcpy_htod_async(inputs[0].device, inputs[0].host, stream)
 
     context.execute_async_v2(bindings=bindings, stream_handle=stream.handle)
     # Transfer predictions back from the GPU.

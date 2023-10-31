@@ -153,9 +153,8 @@ def allocate_buffers(engine):
 
 def forward_pass(x, inputs, outputs, bindings, stream, context):
     x = x.transpose(2, 0, 1)[np.newaxis, :, :, :]
-    inputs[0].host = np.ascontiguousarray(x, dtype=np.float32)
     [
-        cuda.memcpy_dtod_async(inp.device, inp.host, stream)
+        cuda.memcpy_dtod_async(inp.device, np.ascontiguousarray(x, dtype=np.float32), stream)
         for inp in inputs
     ]
 

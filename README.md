@@ -46,6 +46,7 @@ unzip WIDER_val.zip
 python3 preprocess_calibration_images.py
 find WIDER_val/resized_images -type f -name "*.jpg" > calibration_file.txt
 pip install pycuda
+apt update && apt install libgl-dev -y
 ```
 
 Optimize the model : 

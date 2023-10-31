@@ -153,6 +153,7 @@ def allocate_buffers(engine):
 
 def forward_pass(x, inputs, outputs, bindings, stream, context):
     x = x.transpose(2, 0, 1)[np.newaxis, :, :, :]
+    print(x.shape)
     inputs[0].host = np.ascontiguousarray(x, dtype=np.float32)
     cuda.memcpy_htod_async(inputs[0].device, inputs[0].host, stream)
 

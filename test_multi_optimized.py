@@ -387,7 +387,6 @@ if __name__ == '__main__':
     with open("model.trt", "rb") as f, trt.Runtime(TRT_LOGGER) as runtime:
         engine = runtime.deserialize_cuda_engine(f.read())
 
-    inputs, outputs, bindings, stream = allocate_buffers(engine)
 
 
 
@@ -402,6 +401,8 @@ if __name__ == '__main__':
     videos = os.listdir(videos_path)
     # Forward pass
     with engine.create_execution_context() as context:
+        inputs, outputs, bindings, stream = allocate_buffers(engine)
+
         for video_name in tqdm(videos):
             video_reader = cv2.VideoCapture(os.path.join(videos_path, video_name))
             is_frame_valid, img = video_reader.read()

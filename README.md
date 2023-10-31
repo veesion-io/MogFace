@@ -20,10 +20,9 @@ cd utils/bbox && python setup.py build_ext --inplace && cd ../..
 
 pip uninstall -y opencv-contrib-python \
   && rm -rf /usr/local/lib/python3.10/dist-packages/cv2
-pip install opencv-python
+pip install opencv-contrib-python ffprobe3
 
 apt update && DEBIAN_FRONTEND=noninteractive apt install ffmpeg -y
-pip install ffprobe3
 ```
 
 # Detect and blur faces : 
@@ -36,4 +35,20 @@ CUDA_VISIBLE_DEVICES=0 python test_multi.py -c configs/mogface/MogFace.yml -n 14
 Use the created files to create videos with faces blurred : 
 ```
 python3 blur_detected_faces.py
+```
+
+# Optimize the model
+
+Download the calibration data :
+```
+gdown https://drive.google.com/uc?id=1GUCogbp16PMGa39thoMMeWxp7Rp5oM8Q
+unzip WIDER_val.zip
+python3 preprocess_calibration_images.py
+find WIDER_val/resized_images -type f -name "*.jpg" > calibration_file.txt
+pip install pycuda
+```
+
+Optimize the model : 
+```
+/usr/src/tensorrt/bin/trtexec --onnx=model.onnx     --fp16 --best --workspace=9000 --saveEngine=model_fp16.trt     --inputIOFormats=fp32:chw --allowGPUFallback --outputIOFormats=fp32:chw --calib=calibration_file.txt
 ```
